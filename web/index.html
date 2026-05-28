@@ -370,6 +370,7 @@ function renderPulse(cfg) {
   const textQ    = qs.find(q=>q.type==='text')||{id:'comment',type:'text',text:'Anything else?'};
 
   let pulseStep = 1;
+  window.__pulseGoBack = () => { pulseStep = 1; draw(); };
 
   const scroll  = document.getElementById('survey-scroll');
   const bottom  = document.getElementById('survey-bottom');
@@ -424,7 +425,7 @@ function renderPulse(cfg) {
       scroll.querySelectorAll('.chip').forEach(ch=>ch.addEventListener('click',()=>ch.classList.toggle('sel')));
 
       bottom.innerHTML=`<div class="nav-bar">
-        <button class="btn-back" onclick="(()=>{pulseStep=1;draw()})()">←</button>
+        <button class="btn-back" onclick="__pulseGoBack()">←</button>
         <button class="btn btn-full" onclick="submitPulse()">Submit Feedback ✓</button>
       </div>`;
 
