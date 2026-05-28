@@ -69,6 +69,22 @@ body{
 .section-header{text-align:center;padding:20px 0 8px}
 .section-header .q-text{font-family:'DM Serif Display',serif;font-size:20px;text-align:center}
 
+/* E-Sign */
+.e-sign-wrap{display:flex;flex-direction:column;gap:10px}
+.e-sign-legal{font-size:12px;color:var(--txt2);line-height:1.6;background:var(--bg);
+  border-radius:var(--rad-sm);padding:10px 12px;border-left:3px solid var(--brand)}
+.e-sign-label{font-size:11px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--txt3)}
+.e-sign-input{width:100%;border:none;border-bottom:2px solid var(--bdr);
+  padding:10px 0;font-size:18px;font-family:'DM Serif Display',serif;
+  color:var(--txt);background:transparent;outline:none;transition:border-color .2s}
+.e-sign-input:focus{border-bottom-color:var(--brand)}
+.e-sign-input.signed{border-bottom-color:#1D9E75;color:#1D9E75}
+.e-sign-meta{font-size:11px;color:var(--txt3)}
+.e-sign-status{display:none;align-items:center;gap:6px;font-size:13px;
+  font-weight:500;color:#1D9E75;padding:10px 12px;background:#E1F5EE;border-radius:var(--rad-sm)}
+.e-sign-status.show{display:flex}
+
 /* Stars */
 .stars-row{display:flex;justify-content:center;gap:6px;margin-bottom:10px}
 .star{font-size:48px;cursor:pointer;filter:grayscale(1) opacity(.2);
@@ -461,7 +477,12 @@ function renderOnePerPage(cfg) {
       </div>`;
     }
 
-    if (q.type==='section_header') setTimeout(()=>nextQ(),1800);
+    if (q.type==='section_header' && !q.video && !q.image) {
+        setTimeout(()=>nextQ(),1800);
+    } else if (q.type==='section_header') {
+        bottom.style.display='block';
+        bottom.innerHTML=`<button class="btn btn-full" onclick="nextQ()">I have read the document →</button>`;
+    }
     attachInputListeners(q, qs);
   }
 
@@ -674,6 +695,7 @@ function renderInput(q) {
     case 'yes_no':       return renderYesNo(q);
     case 'nps':          return renderNPS(q);
     case 'scale':        return renderScale(q);
+    case 'e_sign':       return renderESign(q);
     case 'section_header': return '';
     default: return '';
   }
@@ -813,6 +835,43 @@ async function apiFetch(qs) {
 async function apiPost(body) {
   const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body)});
   return r.json();
+}
+
+// ── E-Sign ────────────────────────────────────────────
+function renderESign(q) {
+  const ts = new Date().toLocaleString('en-IN',{
+    day:'numeric',month:'long',year:'numeric',
+    hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'
+  });
+  return `<div class="e-sign-wrap">
+    <div class="e-sign-legal">By typing your full name below, you confirm you have read and understood the document above. This constitutes your legally binding digital signature and will be recorded with a timestamp.</div>
+    <div class="e-sign-field">
+      <div class="e-sign-label">Your signature</div>
+      <input type="text" class="e-sign-input" id="es-${q.id}"
+        placeholder="${q.placeholder||'Type your full legal name…'}"
+        autocomplete="name" autocapitalize="words"
+        oninput="onSignInput('${q.id}',this)">
+    </div>
+    <div class="e-sign-meta">📅 ${ts} (IST) — recorded on submission</div>
+    <div class="e-sign-status" id="esok-${q.id}">
+      ✓ Signed as: <strong id="esname-${q.id}"></strong>
+    </div>
+  </div>`;
+}
+
+function onSignInput(qid, el) {
+  const val = el.value.trim();
+  if (val.length >= 3) {
+    answers[qid] = { name: val, signed_at: new Date().toISOString() };
+    el.classList.add('signed');
+    const ok = document.getElementById('esok-'+qid);
+    if (ok) { ok.classList.add('show'); document.getElementById('esname-'+qid).textContent = val; }
+  } else {
+    delete answers[qid];
+    el.classList.remove('signed');
+    const ok = document.getElementById('esok-'+qid);
+    if (ok) ok.classList.remove('show');
+  }
 }
 </script>
 </body>
