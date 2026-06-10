@@ -169,6 +169,17 @@ body{
 .pill-label{font-size:15px;font-weight:700;color:var(--txt)}
 .pill-sub{font-size:11px;font-weight:600;color:var(--brand);letter-spacing:.04em}
 
+/* Scrollable Iframe */
+.doc-iframe-html {
+  width: 100%;
+  height: 62vh;
+  min-height: 320px;
+  border: none;
+  display: block;
+  border-radius: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* End screens */
 .end-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
   text-align:center;padding:32px 16px 8px}
@@ -466,7 +477,7 @@ function renderOnePerPage(cfg) {
     const pct = Math.round(((currentQIdx)/tot)*100);
 
     // Special vertical layout for section_header with media
-    if (q.type==='section_header' && (q.video||q.image)) {
+    if (q.type==='section_header' && (q.video||q.image||q.html)) {
         renderDocMedia(q, pct, tot);
         return;
     }
@@ -894,9 +905,22 @@ function onSignInput(qid, el) {
 function renderDocMedia(q, pct, tot) {
   const scroll = document.getElementById('survey-scroll');
   const bottom = document.getElementById('survey-bottom');
-  const mediaEl = q.video
-    ? `<div class="doc-media-wrap"><iframe src="${q.video}" class="doc-iframe" allowfullscreen loading="lazy"></iframe></div>`
-    : `<div class="doc-media-wrap"><img src="${q.image}" class="doc-img-el" loading="lazy"></div>`;
+
+  let mediaEl;
+  if (q.html) {
+    mediaEl = `<div class="doc-media-wrap" style="overflow:hidden">
+      <iframe src="${q.html}" class="doc-iframe-html" scrolling="yes" loading="lazy"></iframe>
+    </div>`;
+  } else if (q.video) {
+    mediaEl = `<div class="doc-media-wrap">
+      <iframe src="${q.video}" class="doc-iframe" allowfullscreen loading="lazy"></iframe>
+    </div>`;
+  } else {
+    mediaEl = `<div class="doc-media-wrap">
+      <img src="${q.image}" class="doc-img-el" loading="lazy">
+    </div>`;
+  }
+
   scroll.innerHTML = `
     <div class="prog-wrap"><div class="prog-bar" style="width:${pct}%"></div></div>
     <div class="prog-fraction">${currentQIdx+1} of ${tot}</div>
@@ -905,14 +929,9 @@ function renderDocMedia(q, pct, tot) {
       <div class="q-text">${q.text||''}</div>
       ${q.hint?`<div class="q-hint" style="margin-top:4px">${q.hint}</div>`:''}
     </div>`;
+
   bottom.style.display = 'block';
-  //bottom.innerHTML = `<button class="btn btn-full" onclick="nextQ()">I have read the document →</button>`;
-  bottom.innerHTML = `<button class="btn btn-full" id="read-cta" disabled 
-  style="opacity:0.4" onclick="nextQ()">I have read the document →</button>`;
-    setTimeout(()=>{
-    const b=document.getElementById('read-cta');
-    if(b){b.disabled=false;b.style.opacity='1';}
-    }, 5000);
+  bottom.innerHTML = `<button class="btn btn-full" onclick="nextQ()">I have read the document →</button>`;
 }
 </script>
 </body>
