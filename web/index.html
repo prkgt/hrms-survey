@@ -35,9 +35,20 @@ body{
   display:flex;flex-direction:column;margin-top:8px;overflow:hidden;
   animation:slideUp .4s cubic-bezier(.34,1.56,.64,1) both}
 @keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
-.card-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:24px 24px 0;display:flex;flex-direction:column}
-.card-bottom{padding:12px 24px;padding-bottom:max(24px,env(safe-area-inset-bottom));
-  background:var(--sur);border-top:.5px solid var(--bdr)}
+.card-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px 24px 0;  /* reduced from 28px to 16px */
+  display: flex;
+  flex-direction: column;
+}
+.card-bottom {
+  padding: 12px 24px;
+  padding-bottom: max(20px, env(safe-area-inset-bottom));
+  background: var(--sur);
+  border-top: .5px solid var(--bdr);
+}
 .step{display:none;flex-direction:column;flex:1}
 .step.active{display:flex;animation:fadeIn .3s ease both}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -482,14 +493,16 @@ function renderOnePerPage(cfg) {
         return;
     }
 
-    scroll.innerHTML=`
-      <div class="prog-wrap"><div class="prog-bar" style="width:${pct}%"></div></div>
-      <div class="prog-fraction">${currentQIdx+1} of ${tot}</div>
-      ${mediaHTML(q)}
-      ${q.icon?`<div class="q-icon">${q.icon}</div>`:''}
-      <div class="q-text">${q.text||''}</div>
-      ${q.hint?`<div class="q-hint">${q.hint}</div>`:''}
-      <div id="q-input" style="margin-top:14px">${renderInput(q)}</div>`;
+    scroll.innerHTML = `
+    <div class="prog-wrap" style="margin-bottom:8px">
+        <div class="prog-bar" style="width:${pct}%"></div>
+    </div>
+    <div class="prog-fraction" style="margin-bottom:10px">${currentQIdx+1} of ${tot}</div>
+    ${mediaEl}
+    <div class="doc-info">
+        <div class="q-text">${q.text||''}</div>
+        ${q.hint?`<div class="q-hint" style="margin-top:4px">${q.hint}</div>`:''}
+    </div>`;
 
     bottom.innerHTML='';
 
