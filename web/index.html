@@ -390,6 +390,11 @@ function renderSurvey(cfg) {
   else                              renderOnePerPage(cfg);
 }
 
+function ackConfirm(qid) {
+  answers[qid] = 'yes';
+  window.nextQ();
+}
+
 // ── LAYOUT: pulse (star → chips → text) ───────────────
 function renderPulse(cfg) {
   const qs    = cfg.questions||[];
@@ -493,6 +498,27 @@ function renderOnePerPage(cfg) {
         return;
     }
 
+    // Acknowledgement yes_no — CTAs in bottom bar, not scroll area
+    if (q.type==='yes_no' && q.back_on_no) {
+    scroll.innerHTML=`
+        <div class="prog-wrap"><div class="prog-bar" style="width:${pct}%"></div></div>
+        <div class="prog-fraction">${currentQIdx+1} of ${tot}</div>
+        <div class="q-card" style="margin-top:8px">
+        <div class="q-text">${q.text||''}</div>
+        ${q.hint?`<div class="q-hint" style="margin-top:6px">${q.hint}</div>`:''}
+        </div>`;
+    bottom.style.display='block';
+    bottom.innerHTML=`<div class="nav-bar">
+        <button class="btn-back" style="width:auto;padding:0 18px;border-radius:14px;
+        font-size:13px;font-family:inherit;font-weight:500;cursor:pointer"
+        onclick="prevQ()">← Not yet</button>
+        <button class="btn btn-full" onclick="ackConfirm('${q.id}')">
+        ${q.label_yes||'✅ Yes, I confirm'}
+        </button>
+    </div>`;
+    return;
+    }
+
     scroll.innerHTML = `
     <div class="prog-wrap" style="margin-bottom:8px">
         <div class="prog-bar" style="width:${pct}%"></div>
@@ -516,7 +542,7 @@ function renderOnePerPage(cfg) {
     }
 
     if (q.type==='section_header' && !q.video && !q.image) {
-        setTimeout(()=>nextQ(),1800);
+        setTimeout(()=>nextQ(),2000);
     } else if (q.type==='section_header') {
         bottom.style.display='block';
         bottom.innerHTML=`<button class="btn btn-full" onclick="nextQ()">I have read the document →</button>`;
@@ -944,7 +970,17 @@ function renderDocMedia(q, pct, tot) {
     </div>`;
 
   bottom.style.display = 'block';
-  bottom.innerHTML = `<button class="btn btn-full" onclick="nextQ()">I have read the document →</button>`;
+  bottom.innerHTML = `<button class="btn btn-full" id="doc-cta" 
+  onclick="nextQ()">I have read the document →</button>`;
+    // Attach touchstart to pre-emptively blur iframe
+    const cta = document.getElementById('doc-cta');
+    if (cta) {
+    cta.addEventListener('touchstart', () => {
+        document.querySelectorAll('.doc-iframe-html').forEach(f => {
+        try { f.blur(); f.contentWindow.blur(); } catch(_) {}
+        });
+    }, { passive: true });
+    }
 }
 </script>
 </body>
