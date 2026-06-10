@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/app.js", "destination": "/web/app.js" },
     { "source": "/", "destination": "/web/index.html" },
-    { "source": "/leaderboard", "destination": "/web/leaderboard.html" }
+    { "source": "/leaderboard", "destination": "/web/leaderboard.html" },
+    { "source": "/(.*\\.html)", "destination": "/web/$1" }
   ]
 }
