@@ -561,11 +561,10 @@ function renderOnePerPage(cfg) {
         <div class="prog-bar" style="width:${pct}%"></div>
     </div>
     <div class="prog-fraction" style="margin-bottom:10px">${currentQIdx+1} of ${tot}</div>
-    ${mediaEl}
-    <div class="doc-info">
-        <div class="q-text">${q.text||''}</div>
-        ${q.hint?`<div class="q-hint" style="margin-top:4px">${q.hint}</div>`:''}
-    </div>`;
+    ${q.icon?`<div class="q-icon">${q.icon}</div>`:''}
+    <div class="q-text">${q.text||''}</div>
+    ${q.hint?`<div class="q-hint" style="margin-top:4px">${q.hint}</div>`:''}
+    <div id="q-input" style="margin-top:14px">${renderInput(q)}</div>`;
 
     bottom.innerHTML='';
 
