@@ -43,6 +43,7 @@ body{
   display: flex;
   flex-direction: column;
 }
+.card-scroll.no-scroll{overflow-y:hidden}
 .card-bottom {
   padding: 12px 24px;
   padding-bottom: max(32px, env(safe-area-inset-bottom));
@@ -238,7 +239,7 @@ body{
 .doc-heading .q-text{font-size:15px;margin-bottom:2px}
 .doc-heading .q-hint{font-size:12px;margin:0}
 
-.doc-media-wrap.edge{flex:1;min-height:220px;margin:0 -14px;
+.doc-media-wrap.edge{flex:1;min-height:160px;margin:0 -14px;
   border-radius:0;position:relative;overflow:hidden}
 .doc-media-wrap.edge .doc-iframe-html,
 .doc-media-wrap.edge .doc-img-el,
@@ -364,6 +365,7 @@ let config      = null;
 let answers     = {};       // { qId: value }
 let currentQIdx = 0;        // for one_per_page
 let lastPayload = null;
+let currentDocQuestion = null; 
 
 const STAR_META = [
   null,
@@ -531,6 +533,7 @@ function renderOnePerPage(cfg) {
         renderDocMedia(q, pct, tot);
         return;
     }
+    scroll.classList.remove('no-scroll');
 
     // Acknowledgement yes_no — CTAs in bottom bar, not scroll area
     if (q.type==='yes_no' && q.back_on_no) {
@@ -976,7 +979,9 @@ function onSignInput(qid, el) {
 }
 
 function renderDocMedia(q, pct, tot) {
+  currentDocQuestion = q;  
   const scroll = document.getElementById('survey-scroll');
+  scroll.classList.add('no-scroll');
   const bottom = document.getElementById('survey-bottom');
   const combined = !!q.confirm_text;
   const showProgress = tot > 1;
@@ -993,7 +998,7 @@ function renderDocMedia(q, pct, tot) {
       </div>
       <iframe id="doc-iframe" src="${q.html}" class="doc-iframe-html"
         scrolling="yes" loading="lazy"
-        onload="onDocIframeLoad(${!!q.scroll_required}, ${combined}, ${JSON.stringify(q.confirm_label||'')})"></iframe>
+        onload="onDocIframeLoad(${!!q.scroll_required}, ${combined})"></iframe>
       <div class="scroll-badge" id="scroll-badge">↓ Scroll to read</div>
     </div>`;
   } else if (q.image) {
@@ -1072,7 +1077,7 @@ function onDocIframeLoad(scrollRequired, combined, label) {
 
   } catch(e) {
     if (badge) badge.classList.add('hide');
-    enableDocCTA(combined, label);
+    enableDocCTA(combined);
   }
 }
 
@@ -1086,11 +1091,13 @@ function formatISTTimestamp() {
   return `${get('day')} ${get('month')} ${get('year')}, ${get('hour')}:${get('minute')} ${get('dayPeriod').toUpperCase()} IST`;
 }
 
-function enableDocCTA() {
+function enableDocCTA(combined) {
   const cta = document.getElementById('doc-cta');
   if (!cta) return;
   cta.disabled = false;
-  cta.textContent = 'I have read the document →';
+  cta.textContent = combined
+    ? ((currentDocQuestion && currentDocQuestion.confirm_label) || '✅ Yes, I confirm')
+    : 'I have read the document →';
 }
 </script>
 </body>
