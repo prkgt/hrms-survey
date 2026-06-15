@@ -39,7 +39,7 @@ body{
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 16px 24px 0;  /* reduced from 28px to 16px */
+  padding: 12px 14px 0; 
   display: flex;
   flex-direction: column;
 }
@@ -223,9 +223,9 @@ body{
 
 .doc-loading{position:absolute;inset:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:10px;background:var(--bg);
-  border-radius:12px;z-index:2;transition:opacity .25s}
+  z-index:2;transition:opacity .25s}
 .doc-loading.hide{opacity:0;pointer-events:none}
-.scroll-badge{position:absolute;bottom:14px;left:50%;
+.scroll-badge{position:absolute;bottom:10px;left:50%;
   transform:translateX(-50%);background:rgba(20,10,40,0.65);color:#fff;
   font-size:12px;font-weight:600;padding:7px 14px;border-radius:20px;
   display:flex;align-items:center;gap:6px;pointer-events:none;
@@ -233,9 +233,23 @@ body{
 .scroll-badge.hide{opacity:0}
 @keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}
   50%{transform:translateX(-50%) translateY(6px)}}
+
+.doc-heading{flex-shrink:0;margin-bottom:8px}
+.doc-heading .q-text{font-size:15px;margin-bottom:2px}
+.doc-heading .q-hint{font-size:12px;margin:0}
+
+.doc-media-wrap.edge{flex:1;min-height:220px;margin:0 -14px;
+  border-radius:0;position:relative;overflow:hidden}
+.doc-media-wrap.edge .doc-iframe-html,
+.doc-media-wrap.edge .doc-img-el,
+.doc-media-wrap.edge .doc-iframe{height:100%;width:100%;display:block}
+
+.confirm-card{background:var(--bg);border-radius:var(--rad);
+  padding:12px 14px;margin-bottom:10px}
+.confirm-card .q-text{font-size:13px;margin-bottom:6px;line-height:1.5}
+.confirm-meta{font-size:11px;color:var(--txt3)}
+
 .btn-full[disabled]{opacity:.45;cursor:default}
-
-
 
 /* Scrollable layout */
 .scroll-questions{display:flex;flex-direction:column;gap:14px;padding-bottom:16px}
@@ -964,41 +978,60 @@ function onSignInput(qid, el) {
 function renderDocMedia(q, pct, tot) {
   const scroll = document.getElementById('survey-scroll');
   const bottom = document.getElementById('survey-bottom');
+  const combined = !!q.confirm_text;
+  const showProgress = tot > 1;
+
+  const headTitle = q.text || config.title || '';
+  const headSub   = q.hint || config.subtitle || '';
 
   let mediaEl;
   if (q.html) {
-    mediaEl = `<div class="doc-media-wrap">
+    mediaEl = `<div class="doc-media-wrap edge">
       <div class="doc-loading" id="doc-loading">
         <div class="spinner"></div>
         <div class="loading-sub">Loading announcement…</div>
       </div>
       <iframe id="doc-iframe" src="${q.html}" class="doc-iframe-html"
-        scrolling="yes" loading="lazy" onload="onDocIframeLoad(${!!q.scroll_required})"></iframe>
+        scrolling="yes" loading="lazy"
+        onload="onDocIframeLoad(${!!q.scroll_required}, ${combined}, ${JSON.stringify(q.confirm_label||'')})"></iframe>
       <div class="scroll-badge" id="scroll-badge">↓ Scroll to read</div>
     </div>`;
   } else if (q.image) {
-    mediaEl = `<div class="doc-media-wrap"><img src="${q.image}" class="doc-img-el" loading="lazy"></div>`;
+    mediaEl = `<div class="doc-media-wrap edge"><img src="${q.image}" class="doc-img-el" loading="lazy"></div>`;
   } else {
-    mediaEl = `<div class="doc-media-wrap"><iframe src="${q.video}" class="doc-iframe" allowfullscreen loading="lazy"></iframe></div>`;
+    mediaEl = `<div class="doc-media-wrap edge"><iframe src="${q.video}" class="doc-iframe" allowfullscreen loading="lazy"></iframe></div>`;
   }
 
   scroll.innerHTML = `
-    <div class="prog-wrap" style="margin-bottom:8px"><div class="prog-bar" style="width:${pct}%"></div></div>
-    <div class="prog-fraction" style="margin-bottom:10px">${currentQIdx+1} of ${tot}</div>
-    ${mediaEl}
-    <div class="doc-info">
-      <div class="q-text">${q.text||''}</div>
-      ${q.hint?`<div class="q-hint" style="margin-top:4px">${q.hint}</div>`:''}
-    </div>`;
+    ${showProgress?`<div class="prog-wrap" style="margin-bottom:8px"><div class="prog-bar" style="width:${pct}%"></div></div>
+    <div class="prog-fraction" style="margin-bottom:8px">${currentQIdx+1} of ${tot}</div>`:''}
+    ${(headTitle||headSub)?`<div class="doc-heading">
+      ${headTitle?`<div class="q-text">${headTitle}</div>`:''}
+      ${headSub?`<div class="q-hint">${headSub}</div>`:''}
+    </div>`:''}
+    ${mediaEl}`;
 
   bottom.style.display = 'block';
   const gated = !!q.scroll_required;
-  bottom.innerHTML = `<button class="btn btn-full" id="doc-cta" 
-    onclick="nextQ()" ${gated?'disabled':''}>
-    ${gated ? '↓ Scroll to continue reading' : 'I have read the document →'}
-  </button>`;
+  const ts = formatISTTimestamp();
 
-  // Pre-emptive blur fix for mobile focus trap (from earlier fix)
+  if (combined) {
+    bottom.innerHTML = `
+      <div class="confirm-card">
+        <div class="q-text">${q.confirm_text}</div>
+        <div class="confirm-meta">📅 ${ts}</div>
+      </div>
+      <button class="btn btn-full" id="doc-cta"
+        onclick="ackConfirm('${q.id}')" ${gated?'disabled':''}>
+        ${gated ? '↓ Scroll to continue reading' : (q.confirm_label || '✅ Yes, I confirm')}
+      </button>`;
+  } else {
+    bottom.innerHTML = `<button class="btn btn-full" id="doc-cta"
+      onclick="nextQ()" ${gated?'disabled':''}>
+      ${gated ? '↓ Scroll to continue reading' : 'I have read the document →'}
+    </button>`;
+  }
+
   const cta = document.getElementById('doc-cta');
   if (cta) {
     cta.addEventListener('touchstart', () => {
@@ -1008,13 +1041,12 @@ function renderDocMedia(q, pct, tot) {
   }
 }
 
-function onDocIframeLoad(scrollRequired) {
+function onDocIframeLoad(scrollRequired, combined, label) {
   const overlay = document.getElementById('doc-loading');
   if (overlay) overlay.classList.add('hide');
 
   const iframe = document.getElementById('doc-iframe');
   const badge  = document.getElementById('scroll-badge');
-  const cta    = document.getElementById('doc-cta');
 
   try {
     const idoc = iframe.contentDocument;
@@ -1022,25 +1054,36 @@ function onDocIframeLoad(scrollRequired) {
     const scrollable = idoc.documentElement.scrollHeight - iwin.innerHeight;
 
     if (scrollable <= 40) {
-      // Content fits — no scroll needed
       if (badge) badge.classList.add('hide');
-      enableDocCTA();
+      enableDocCTA(combined, label);
       return;
     }
 
+    // Cap the required scroll distance to ~1.5 viewport heights
+    // — roughly 1-2 scroll gestures, regardless of total poster length
+    const threshold = Math.min(scrollable, iwin.innerHeight * 1.5);
+
     const checkScroll = () => {
       const pos = iwin.scrollY;
-      const pct = pos / scrollable;
       if (pos > 10 && badge) badge.classList.add('hide');
-      if (pct > 0.85) enableDocCTA();
+      if (pos >= threshold) enableDocCTA(combined, label);
     };
     iwin.addEventListener('scroll', checkScroll);
 
   } catch(e) {
-    // Cross-origin (Drive/YouTube embeds) — can't track, enable immediately
     if (badge) badge.classList.add('hide');
-    enableDocCTA();
+    enableDocCTA(combined, label);
   }
+}
+
+function formatISTTimestamp() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    day:'numeric', month:'long', year:'numeric',
+    hour:'2-digit', minute:'2-digit', hour12:true,
+    timeZone:'Asia/Kolkata'
+  }).formatToParts(new Date());
+  const get = t => parts.find(p=>p.type===t)?.value || '';
+  return `${get('day')} ${get('month')} ${get('year')}, ${get('hour')}:${get('minute')} ${get('dayPeriod').toUpperCase()} IST`;
 }
 
 function enableDocCTA() {
