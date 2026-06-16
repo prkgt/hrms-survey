@@ -1069,13 +1069,24 @@ function renderDocMedia(q, pct, tot) {
     </button>`;
   }
 
-  const cta = document.getElementById('doc-cta');
-  if (cta) {
+    const cta = document.getElementById('doc-cta');
+    if (cta) {
     cta.addEventListener('touchstart', () => {
-      const f = document.getElementById('doc-iframe');
-      if (f) { try { f.blur(); f.contentWindow.blur(); } catch(_) {} }
+        const f = document.getElementById('doc-iframe');
+        if (f) { try { f.blur(); f.contentWindow.blur(); } catch(_) {} }
     }, { passive: true });
-  }
+    }
+
+    // Hard fallback — if iframe onload never fires within 5 seconds, unblock the user
+    setTimeout(() => {
+    const overlay = document.getElementById('doc-loading');
+    if (overlay && !overlay.classList.contains('hide')) {
+        overlay.classList.add('hide');
+        const badge = document.getElementById('scroll-badge');
+        if (badge) badge.classList.add('hide');
+        enableDocCTA(combined);
+    }
+    }, 5000);
 }
 
 function onDocIframeLoad(scrollRequired, combined, label) {
