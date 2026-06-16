@@ -898,28 +898,62 @@ function isVisible(q, ans) {
 async function doSubmit() {
   lastPayload = { action:'submit', survey_id:SURVEY_ID, employee_id:EMP_ID, answers };
   goStep('step-submitting');
-  try {
-    const r = await apiPost(lastPayload);
-    if (r.already_submitted) {
-      if(r.next_date){document.getElementById('alr-date').style.display='';document.getElementById('alr-date-val').textContent=r.next_date;}
-      goStep('step-already');
-    } else if (r.ok) {
-      goStep('step-success');
-      setTimeout(()=>closeView(), 10000);
-    } else {
-      goStep('step-error');
+  document.querySelector('#step-submitting .loading-sub').textContent =
+    "Saving your response — please don't close this screen…";
+
+  const maxAttempts = 3;
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    try {
+      const r = await apiPost(lastPayload);
+      if (r.already_submitted) {
+        if (r.next_date) {
+          document.getElementById('alr-date').style.display = '';
+          document.getElementById('alr-date-val').textContent = r.next_date;
+        }
+        goStep('step-already');
+        return;
+      }
+      if (r.ok) {
+        goStep('step-success');
+        return;
+      }
+      // r returned but not ok — wait and retry
+      attempts++;
+      if (attempts < maxAttempts) await sleep(1000 * attempts);
+    } catch(_) {
+      attempts++;
+      if (attempts < maxAttempts) await sleep(1000 * attempts);
     }
-  } catch(_) { goStep('step-error'); }
+  }
+  // All attempts exhausted
+  goStep('step-error');
 }
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function retrySubmit() {
   if (!lastPayload) return;
   goStep('step-submitting');
-  try {
-    const r = await apiPost(lastPayload);
-    if(r.ok) { goStep('step-success'); setTimeout(()=>closeView(),5000); }
-    else goStep('step-error');
-  } catch(_) { goStep('step-error'); }
+  document.querySelector('#step-submitting .loading-sub').textContent =
+    "Saving your response — please don't close this screen…";
+
+  const maxAttempts = 3;
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    try {
+      const r = await apiPost(lastPayload);
+      if (r.ok) { goStep('step-success'); return; }
+      attempts++;
+      if (attempts < maxAttempts) await sleep(1000 * attempts);
+    } catch(_) {
+      attempts++;
+      if (attempts < maxAttempts) await sleep(1000 * attempts);
+    }
+  }
+  goStep('step-error');
 }
 
 // ── Helpers ────────────────────────────────────────────
