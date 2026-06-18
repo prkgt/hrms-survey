@@ -255,6 +255,33 @@ body{
 .scroll-questions{display:flex;flex-direction:column;gap:14px;padding-bottom:16px}
 .scroll-q{background:var(--bg);border-radius:var(--rad);padding:18px 16px}
 .scroll-q.answered{border:1.5px solid color-mix(in srgb,var(--brand) 30%,transparent)}
+
+/* ── Media Carousel ─────────────────────────────────── */
+.carousel-wrap{flex:1;position:relative;min-height:0;display:flex;flex-direction:column;border-radius:12px;overflow:hidden;background:#111}
+.carousel-track{display:flex;overflow-x:scroll;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;height:100%;scrollbar-width:none}
+.carousel-track::-webkit-scrollbar{display:none}
+.carousel-slide{min-width:100%;width:100%;flex-shrink:0;scroll-snap-align:start;position:relative;background:#111}
+.carousel-slide iframe,.carousel-slide img{width:100%;height:100%;border:none;display:block;object-fit:contain}
+
+/* Dot indicators */
+.c-dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:10;pointer-events:none}
+.c-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.35);transition:background .2s,transform .2s,width .2s}
+.c-dot.active{background:#fff;transform:scale(1.15);width:18px;border-radius:4px}
+
+/* Coach mark */
+.coach-mark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.52);opacity:0;pointer-events:none;z-index:20;transition:opacity .35s;border-radius:12px}
+.coach-mark.show{opacity:1}
+.coach-mark.hide{opacity:0!important;pointer-events:none}
+.coach-inner{display:flex;flex-direction:column;align-items:center;gap:10px}
+.coach-hand{font-size:38px;display:inline-block;animation:swipeLeft 1.1s ease-in-out infinite}
+.coach-label{color:#fff;font-size:13px;font-weight:600;background:rgba(0,0,0,0.55);padding:5px 14px;border-radius:20px;letter-spacing:.3px}
+@keyframes swipeLeft{
+  0%,100%{transform:translateX(6px)}
+  50%{transform:translateX(-14px)}
+}
+
+/* Slide counter badge (top-right) */
+.slide-counter{position:absolute;top:8px;right:10px;background:rgba(0,0,0,0.5);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;z-index:10;pointer-events:none}
 </style>
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
@@ -526,6 +553,8 @@ function renderOnePerPage(cfg) {
     if (!q) { doSubmit(); return; }
     const tot = qs.length;
     const pct = Math.round(((currentQIdx)/tot)*100);
+
+    if (q.type === 'media_carousel') { renderMediaCarousel(q); return; }  // ← add here
 
     // Special vertical layout for section_header with media
     if (q.type==='section_header' && (q.video||q.image||q.html)) {
@@ -1146,6 +1175,126 @@ function enableDocCTA(combined) {
     ? ((currentDocQuestion && currentDocQuestion.confirm_label) || '✅ Yes, I confirm')
     : 'I have read the document →';
 }
+
+/* ── Media Carousel ──────────────────────────────────── */
+function renderMediaCarousel(q) {
+  const scroll = document.querySelector('.card-scroll');
+  const bottom = document.querySelector('.card-bottom');
+  scroll.classList.add('no-scroll');
+  currentDocQuestion = q;
+
+  const items  = Array.isArray(q.items) ? q.items : [];
+  const total  = items.length;
+  const combined = !!q.confirm_text;
+
+  // Heading from q.text/hint or config title/subtitle
+  const headTitle = q.text    || config.title    || '';
+  const headSub   = q.hint    || config.subtitle || '';
+  const headHTML  = (headTitle || headSub) ? `
+    <div class="doc-heading">
+      ${headTitle ? `<div class="q-text">${headTitle}</div>` : ''}
+      ${headSub   ? `<p class="q-hint">${headSub}</p>`       : ''}
+    </div>` : '';
+
+  // Build slides
+  const slidesHTML = items.map((item, i) => {
+    const media = (item.type === 'image')
+      ? `<img src="${item.src}" alt="Slide ${i+1}">`
+      : `<iframe src="${item.src}" allowfullscreen loading="lazy"></iframe>`;
+    return `<div class="carousel-slide" data-index="${i}">${media}</div>`;
+  }).join('');
+
+  // Dots
+  const dotsHTML = items.map((_, i) =>
+    `<span class="c-dot${i===0?' active':''}" data-i="${i}"></span>`
+  ).join('');
+
+  scroll.innerHTML = `
+    ${headHTML}
+    <div class="carousel-wrap" id="carouselWrap">
+      <div class="carousel-track" id="carouselTrack">${slidesHTML}</div>
+      <div class="c-dots" id="cDots">${dotsHTML}</div>
+      <div class="slide-counter" id="slideCounter">1 / ${total}</div>
+      <div class="coach-mark" id="coachMark">
+        <div class="coach-inner">
+          <span class="coach-hand">👈</span>
+          <span class="coach-label">Swipe left to see all slides</span>
+        </div>
+      </div>
+    </div>
+    ${combined ? `
+    <div class="confirm-card" id="confirmCard" style="display:none">
+      <div class="q-text">${q.confirm_text}</div>
+      <div class="confirm-meta" id="confirmMeta"></div>
+    </div>` : ''}
+  `;
+
+  // Bottom CTA
+  bottom.style.display = 'block';
+  bottom.innerHTML = `
+    <button class="btn-primary" id="carouselCta" disabled
+      onclick="carouselConfirm('${q.id}',${combined})">
+      ${combined ? (q.confirm_label||'✅ Yes, I confirm') : 'Continue →'}
+    </button>`;
+
+  const track = document.getElementById('carouselTrack');
+  let maxReached = 0;
+
+  track.addEventListener('scroll', () => {
+    const slideW = track.clientWidth;
+    const current = Math.round(track.scrollLeft / slideW);
+    if (current > maxReached) maxReached = current;
+
+    // Update dots + counter
+    document.querySelectorAll('.c-dot').forEach((d, i) =>
+      d.classList.toggle('active', i === current));
+    const ctr = document.getElementById('slideCounter');
+    if (ctr) ctr.textContent = `${current+1} / ${total}`;
+
+    // Dismiss coach mark on first swipe
+    if (current > 0) {
+      const cm = document.getElementById('coachMark');
+      if (cm) cm.classList.add('hide');
+    }
+
+    // Enable CTA when last slide reached
+    if (maxReached >= total - 1) enableCarouselCTA(combined, q);
+  }, { passive: true });
+
+  // Coach mark: show after 900ms, auto-dismiss after 3s
+  if (total > 1) {
+    setTimeout(() => {
+      const cm = document.getElementById('coachMark');
+      if (cm) {
+        cm.classList.add('show');
+        setTimeout(() => cm.classList.add('hide'), 3000);
+      }
+    }, 900);
+  }
+
+  // 1 slide or 0 — unlock immediately
+  if (total <= 1) enableCarouselCTA(combined, q);
+}
+
+function enableCarouselCTA(combined, q) {
+  const cta = document.getElementById('carouselCta');
+  if (!cta || !cta.disabled) return;
+  cta.disabled = false;
+  if (combined) {
+    const card = document.getElementById('confirmCard');
+    if (card) {
+      card.style.display = 'block';
+      const meta = document.getElementById('confirmMeta');
+      if (meta) meta.textContent = formatISTTimestamp();
+    }
+  }
+}
+
+function carouselConfirm(qid, combined) {
+  if (combined) answers[qid] = 'yes';
+  window.nextQ();
+}
+
 </script>
 </body>
 </html>
