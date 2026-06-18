@@ -280,6 +280,14 @@ body{
   50%{transform:translateX(-14px)}
 }
 
+.btn-primary:disabled {
+  background: var(--acc) !important;
+  color: #fff !important;
+  opacity: 0.38;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
 /* Slide counter badge (top-right) */
 .slide-counter{position:absolute;top:8px;right:10px;background:rgba(0,0,0,0.5);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;z-index:10;pointer-events:none}
 </style>
@@ -1210,32 +1218,33 @@ function renderMediaCarousel(q) {
   ).join('');
 
   scroll.innerHTML = `
-    ${headHTML}
-    <div class="carousel-wrap" id="carouselWrap">
-      <div class="carousel-track" id="carouselTrack">${slidesHTML}</div>
-      <div class="c-dots" id="cDots">${dotsHTML}</div>
-      <div class="slide-counter" id="slideCounter">1 / ${total}</div>
-      <div class="coach-mark" id="coachMark">
-        <div class="coach-inner">
-          <span class="coach-hand">👈</span>
-          <span class="coach-label">Swipe left to see all slides</span>
-        </div>
+  ${headHTML}
+  <div class="carousel-wrap" id="carouselWrap">
+    <div class="carousel-track" id="carouselTrack">${slidesHTML}</div>
+    <div class="c-dots" id="cDots">${dotsHTML}</div>
+    <div class="slide-counter" id="slideCounter">1 / ${total}</div>
+    <div class="coach-mark" id="coachMark">
+      <div class="coach-inner">
+        <span class="coach-hand">👈</span>
+        <span class="coach-label">Swipe left to see all slides</span>
       </div>
     </div>
-    ${combined ? `
-    <div class="confirm-card" id="confirmCard" style="display:none">
-      <div class="q-text">${q.confirm_text}</div>
-      <div class="confirm-meta" id="confirmMeta"></div>
-    </div>` : ''}
-  `;
+  </div>
+`;
 
   // Bottom CTA
   bottom.style.display = 'block';
   bottom.innerHTML = `
+    ${combined ? `
+    <div class="confirm-card" id="confirmCard" style="display:none">
+    <div class="q-text">${q.confirm_text}</div>
+    <div class="confirm-meta" id="confirmMeta"></div>
+    </div>` : ''}
     <button class="btn-primary" id="carouselCta" disabled
-      onclick="carouselConfirm('${q.id}',${combined})">
-      ${combined ? (q.confirm_label||'✅ Yes, I confirm') : 'Continue →'}
-    </button>`;
+    onclick="carouselConfirm('${q.id}',${combined})">
+    ${combined ? (q.confirm_label || '✅ Yes, I confirm') : 'Continue →'}
+  </button>
+`;
 
   const track = document.getElementById('carouselTrack');
   let maxReached = 0;
