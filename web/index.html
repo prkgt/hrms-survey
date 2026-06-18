@@ -280,28 +280,6 @@ body{
   50%{transform:translateX(-14px)}
 }
 
-.btn-primary:disabled {
-  background: var(--acc) !important;
-  color: #fff !important;
-  opacity: 0.38;
-  pointer-events: none;
-  cursor: not-allowed;
-}
-
-#carouselCta {
-  display: block !important;
-  width: 100% !important;
-  padding: 14px !important;
-  background: var(--acc) !important;
-  color: #fff !important;
-  border: none !important;
-  border-radius: var(--rad) !important;
-  font-size: 16px !important;
-  font-weight: 700 !important;
-  cursor: pointer !important;
-  transition: opacity .15s !important;
-  box-sizing: border-box !important;
-}
 #carouselCta:disabled {
   opacity: 0.38 !important;
   pointer-events: none !important;
@@ -1261,7 +1239,7 @@ function renderMediaCarousel(q) {
     <div class="q-text">${q.confirm_text}</div>
     <div class="confirm-meta" id="confirmMeta"></div>
     </div>` : ''}
-    <button class="btn-primary" id="carouselCta" disabled
+    <button class="btn btn-full" id="carouselCta" disabled
     onclick="carouselConfirm('${q.id}',${combined})">
     ${combined ? (q.confirm_label || '✅ Yes, I confirm') : 'Continue →'}
   </button>
