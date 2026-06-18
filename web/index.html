@@ -288,6 +288,26 @@ body{
   cursor: not-allowed;
 }
 
+#carouselCta {
+  display: block !important;
+  width: 100% !important;
+  padding: 14px !important;
+  background: var(--acc) !important;
+  color: #fff !important;
+  border: none !important;
+  border-radius: var(--rad) !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: opacity .15s !important;
+  box-sizing: border-box !important;
+}
+#carouselCta:disabled {
+  opacity: 0.38 !important;
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+}
+
 /* Slide counter badge (top-right) */
 .slide-counter{position:absolute;top:8px;right:10px;background:rgba(0,0,0,0.5);color:#fff;font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;z-index:10;pointer-events:none}
 </style>
@@ -1191,8 +1211,9 @@ function renderMediaCarousel(q) {
   scroll.classList.add('no-scroll');
   currentDocQuestion = q;
 
-  const items  = Array.isArray(q.items) ? q.items : [];
-  const total  = items.length;
+  const items = Array.isArray(q.items) && q.items.length > 0 ? q.items : [];
+  const total = items.length;
+  if (total === 0) { /* fallback — just show error or skip */ return; }
   const combined = !!q.confirm_text;
 
   // Heading from q.text/hint or config title/subtitle
@@ -1280,9 +1301,7 @@ function renderMediaCarousel(q) {
       }
     }, 900);
   }
-
-  // 1 slide or 0 — unlock immediately
-  if (total <= 1) enableCarouselCTA(combined, q);
+  if (total === 1) enableCarouselCTA(combined, q);
 }
 
 function enableCarouselCTA(combined, q) {
