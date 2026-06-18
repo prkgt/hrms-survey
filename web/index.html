@@ -1205,9 +1205,12 @@ function renderMediaCarousel(q) {
 
   // Build slides
   const slidesHTML = items.map((item, i) => {
+    const src = (item.type === 'video' && item.src.includes('youtube.com'))
+        ? item.src + (item.src.includes('?') ? '&' : '?') + 'enablejsapi=1'
+        : item.src;
     const media = (item.type === 'image')
-      ? `<img src="${item.src}" alt="Slide ${i+1}">`
-      : `<iframe src="${item.src}" allowfullscreen></iframe>`;
+        ? `<img src="${item.src}" alt="Slide ${i+1}">`
+        : `<iframe src="${src}" allowfullscreen></iframe>`;
     return `<div class="carousel-slide" data-index="${i}">${media}</div>`;
   }).join('');
 
@@ -1247,10 +1250,16 @@ function renderMediaCarousel(q) {
 
   const track = document.getElementById('carouselTrack');
   let maxReached = 0;
+  let prevSlide = 0;
 
   track.addEventListener('scroll', () => {
     const slideW = track.clientWidth;
     const current = Math.round(track.scrollLeft / slideW);
+
+    if (current !== prevSlide) {
+    pauseCarouselSlide(prevSlide);
+    prevSlide = current;
+    }
     if (current > maxReached) maxReached = current;
 
     // Update dots + counter
@@ -1280,6 +1289,26 @@ function renderMediaCarousel(q) {
     }, 900);
   }
   if (total === 1) enableCarouselCTA(combined, q);
+}
+
+function pauseCarouselSlide(index) {
+  const slides = document.querySelectorAll('.carousel-slide');
+  if (!slides[index]) return;
+  const iframe = slides[index].querySelector('iframe');
+  if (!iframe) return;
+
+  // YouTube: pause via postMessage (requires enablejsapi=1)
+  try {
+    iframe.contentWindow.postMessage(
+      JSON.stringify({ event:'command', func:'pauseVideo', args:[] }), '*'
+    );
+  } catch(e) {}
+
+  // Same-origin HTML slides: pause any <video> directly
+  try {
+    const video = iframe.contentDocument?.querySelector('video');
+    if (video) video.pause();
+  } catch(e) {}
 }
 
 function enableCarouselCTA(combined, q) {
