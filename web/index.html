@@ -390,8 +390,13 @@ body{
 // ── Config ─────────────────────────────────────────────
 const API_URL  = 'https://script.google.com/macros/s/AKfycbwggTXHSUf_lwJBuusSohnTWU2FTUFlrXVjXFVT8QxfaOPr6pn_b_ZSAs9v9atZFSSPBQ/exec';
 const urlP     = new URLSearchParams(location.search);
-const SURVEY_ID= urlP.get('surveyId')||urlP.get('survey_id')||'';
-const EMP_ID   = urlP.get('employeeId')||urlP.get('employee_id')||urlP.get('riderId')||'guest';
+const SURVEY_ID = urlP.get('surveyId')||urlP.get('survey_id')||'';
+const EMP_ID    = urlP.get('employeeId')||urlP.get('employee_id')||urlP.get('riderId')||'guest';
+const SLOT_DATE = urlP.get('slotDate') ||
+  new Date().toLocaleDateString('en-IN', {
+    day:'numeric', month:'short', year:'numeric',
+    timeZone:'Asia/Kolkata'
+  });
 
 document.getElementById('emp-badge').textContent = 'ID: ' + EMP_ID;
 
