@@ -428,6 +428,12 @@ const STAR_META = [
     goStep('step-already'); return;
   }
 
+  const SLOT_DATE = urlP.get('slotDate') ||
+  new Date().toLocaleDateString('en-IN', {
+    day:'numeric', month:'short', year:'numeric',
+    timeZone:'Asia/Kolkata'
+  });
+
   renderSurvey(config);
   goStep('step-survey');
 })();
@@ -458,7 +464,7 @@ function renderSurvey(cfg) {
   if      (layout==='pulse')        renderPulse(cfg);
   else if (layout==='scrollable')   renderScrollable(cfg);
   else if (layout==='nps')          renderNPSLayout(cfg);
-  else                              renderOnePerPage(cfg);
+  if (cfg.subtitle) cfg.subtitle = cfg.subtitle.replace('{{slotDate}}', SLOT_DATE);
 }
 
 function ackConfirm(qid) {
@@ -606,7 +612,8 @@ function renderOnePerPage(cfg) {
     bottom.innerHTML='';
 
     // Auto-advance types
-    const autoAdv = ['star_rating','mcq','yes_no','nps','scale'];
+    const autoAdv = ['star_rating','yes_no','nps','scale',
+    ...(q.auto_advance === false || q.allow_other ? [] : ['mcq'])];
     if (!autoAdv.includes(q.type) && q.type!=='section_header') {
       bottom.innerHTML=`<div class="nav-bar">
         ${currentQIdx>0?`<button class="btn-back" onclick="prevQ()">←</button>`:''}
@@ -648,15 +655,39 @@ function renderOnePerPage(cfg) {
     }
 
     if (q.type==='mcq') {
-      document.querySelectorAll('.option-btn').forEach(btn=>{
-        btn.addEventListener('click',()=>{
-          document.querySelectorAll('.option-btn').forEach(b=>b.classList.remove('sel'));
-          btn.classList.add('sel'); answers[q.id]=btn.dataset.val; auto();
-        });
-      });
-    }
+  document.querySelectorAll('.option-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.option-btn').forEach(b=>b.classList.remove('sel'));
+      btn.classList.add('sel');
+      answers[q.id] = btn.dataset.val;
 
-    if (q.type==='yes_no') {
+      // Toggle inline Other input
+      if (q.allow_other) {
+        const wrap = document.getElementById('other-wrap-'+q.id);
+        const inp  = document.getElementById('other-input-'+q.id);
+        const isOther = btn.dataset.val === (q.other_label||'Others');
+        if (wrap) wrap.style.display = isOther ? 'block' : 'none';
+        if (isOther && inp) { inp.value=''; answers[q.id+'_other']=''; inp.focus(); }
+        else delete answers[q.id+'_other'];
+        // Never auto-advance when allow_other — user taps Next
+        return;
+      }
+
+      // Normal MCQ auto-advance
+      if (q.auto_advance !== false) auto();
+    });
+  });
+
+  // Capture other text
+  if (q.allow_other) {
+    const inp = document.getElementById('other-input-'+q.id);
+    if (inp) inp.addEventListener('input', () => {
+      answers[q.id+'_other'] = inp.value.trim();
+    });
+  }
+}
+
+  if (q.type==='yes_no') {
     document.querySelectorAll('.yn-btn').forEach(btn=>{
         btn.addEventListener('click',()=>{
         document.querySelectorAll('.yn-btn').forEach(b=>b.classList.remove('sel'));
@@ -855,7 +886,24 @@ function renderStars(q) {
 }
 
 function renderMCQ(q) {
-  return `<div class="options-col">${(q.options||[]).map(o=>`<button class="option-btn" data-val="${o}">${o}</button>`).join('')}</div>`;
+  const otherLabel = q.other_label || 'Others';
+  return `<div class="options-col">
+    ${(q.options||[]).map(o => `
+      <button class="option-btn" data-val="${o}">${o}</button>
+      ${(q.allow_other && o === otherLabel) ? `
+        <div class="other-input-wrap" id="other-wrap-${q.id}"
+          style="display:none;margin-top:-4px;padding:10px 14px 12px;
+                 background:color-mix(in srgb,var(--brand) 6%,white);
+                 border:1.5px solid var(--brand);border-top:none;
+                 border-radius:0 0 var(--rad-sm) var(--rad-sm)">
+          <input type="text" id="other-input-${q.id}"
+            placeholder="${q.other_placeholder||'Please specify…'}"
+            style="width:100%;border:none;border-bottom:1.5px solid var(--bdr);
+                   padding:6px 0;font-size:14px;font-family:'DM Sans',sans-serif;
+                   color:var(--txt);background:transparent;outline:none">
+        </div>` : ''}
+    `).join('')}
+  </div>`;
 }
 
 function renderChips(q) {
