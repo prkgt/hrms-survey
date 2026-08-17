@@ -465,11 +465,12 @@ function applyEndScreens(cfg) {
 
 // ── Layout router ──────────────────────────────────────
 function renderSurvey(cfg) {
+  if (cfg.subtitle) cfg.subtitle = cfg.subtitle.replace('{{slotDate}}', SLOT_DATE);
   const layout = cfg.layout||'one_per_page';
   if      (layout==='pulse')        renderPulse(cfg);
   else if (layout==='scrollable')   renderScrollable(cfg);
   else if (layout==='nps')          renderNPSLayout(cfg);
-  if (cfg.subtitle) cfg.subtitle = cfg.subtitle.replace('{{slotDate}}', SLOT_DATE);
+  else                              renderOnePerPage(cfg);
 }
 
 function ackConfirm(qid) {
