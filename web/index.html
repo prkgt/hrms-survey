@@ -776,8 +776,14 @@ function renderOnePerPage(cfg) {
     }
 
     if (q.type==='text') {
-      const ta=document.querySelector('.q-textarea');
-      if(ta) ta.addEventListener('input',()=>{ answers[q.id]=ta.value; });
+      if (q.input_type === 'date') {
+        // Validation handled inline via oninput — disable Next until valid
+        const nextBtn = document.getElementById('btn-next');
+        if (nextBtn) nextBtn.disabled = true;
+      } else {
+        const ta = document.querySelector('.q-textarea');
+        if (ta) ta.addEventListener('input', () => { answers[q.id] = ta.value; });
+      }
     }
   }
 
@@ -911,7 +917,14 @@ function renderInput(q) {
     case 'star_rating':  return renderStars(q);
     case 'mcq':          return renderMCQ(q);
     case 'multi_select': return renderChips(q);
-    case 'text':         return `<textarea class="q-textarea" id="ta-${q.id}" placeholder="${q.placeholder||'Your answer…'}"></textarea>`;
+        case 'text':         return q.input_type === 'date'
+      ? `<input type="date" id="ta-${q.id}"
+           style="width:100%;border:1.5px solid var(--bdr);border-radius:var(--rad-sm);
+                  padding:12px 14px;font-size:15px;font-family:'DM Sans',sans-serif;
+                  color:var(--txt);background:var(--sur);outline:none;transition:border-color .15s"
+           oninput="validateDateInput('${q.id}',this,${q.date_min_today||false},${q.date_max_days||0})">
+         <div id="date-err-${q.id}" style="font-size:12px;color:#E24B4A;margin-top:6px;display:none"></div>`
+      : `<textarea class="q-textarea" id="ta-${q.id}" placeholder="${q.placeholder||'Your answer…'}"></textarea>`;
     case 'yes_no':       return renderYesNo(q);
     case 'nps':          return renderNPS(q);
     case 'scale':        return renderScale(q);
@@ -947,7 +960,7 @@ function renderMCQ(q) {
     if (hasOther) opts.push(otherLabel);           // re-add Other at end
   }
 
-  const nudge = q.show_nudge !== false ? `
+  const nudge = q.show_nudge === true ? `
     <div style="background:#FFF8E7;border:1.5px solid #F5C842;border-radius:var(--rad-sm);
                 padding:12px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start">
       <span style="font-size:18px;flex-shrink:0">⚠️</span>
@@ -1170,6 +1183,45 @@ function onSignInput(qid, el) {
     el.classList.remove('signed');
     const ok = document.getElementById('esok-'+qid);
     if (ok) ok.classList.remove('show');
+  }
+}
+
+function validateDateInput(qid, el, minToday, maxDays) {
+  const errEl = document.getElementById('date-err-' + qid);
+  const nextBtn = document.getElementById('btn-next');
+  const val = el.value;
+
+  if (!val) {
+    delete answers[qid];
+    if (nextBtn) nextBtn.disabled = true;
+    if (errEl) errEl.style.display = 'none';
+    return;
+  }
+
+  const selected = new Date(val);
+  const today    = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const maxDate  = new Date(today);
+  if (maxDays > 0) maxDate.setDate(today.getDate() + maxDays);
+
+  let error = '';
+  if (minToday && selected < today) {
+    error = '⚠️ Last working day cannot be in the past.';
+  } else if (maxDays > 0 && selected > maxDate) {
+    error = `⚠️ Last working day cannot be more than ${maxDays} days from today.`;
+  }
+
+  if (error) {
+    if (errEl) { errEl.textContent = error; errEl.style.display = 'block'; }
+    el.style.borderColor = '#E24B4A';
+    delete answers[qid];
+    if (nextBtn) nextBtn.disabled = true;
+  } else {
+    if (errEl) errEl.style.display = 'none';
+    el.style.borderColor = 'var(--brand)';
+    answers[qid] = val;
+    if (nextBtn) nextBtn.disabled = false;
   }
 }
 
