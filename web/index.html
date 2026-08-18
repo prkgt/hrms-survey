@@ -82,8 +82,8 @@ body{
 
 /* Question card */
 .q-card{background:var(--bg);border-radius:var(--rad);padding:18px 16px;margin-bottom:12px}
-.q-text{font-size:16px;font-weight:600;color:var(--txt);line-height:1.45;margin-bottom:4px}
-.q-hint{font-size:13px;color:var(--txt3);margin-bottom:14px;margin-top:4px}
+.q-text{font-size:18px;font-weight:600;color:var(--txt);line-height:1.45;margin-bottom:4px}
+.q-hint{font-size:14px;color:var(--txt3);margin-bottom:14px;margin-top:4px}
 .q-icon{font-size:22px;margin-bottom:8px}
 .section-header{text-align:center;padding:20px 0 8px}
 .section-header .q-text{font-family:'DM Serif Display',serif;font-size:20px;text-align:center}
@@ -120,7 +120,7 @@ body{
   display:flex;align-items:center;justify-content:space-between;
   width:100%;padding:14px 16px;
   border:1.5px solid var(--bdr);border-radius:var(--rad-sm);
-  background:var(--sur);font-size:15px;font-weight:500;
+  background:var(--sur);font-size:16px;font-weight:500;
   color:var(--txt);cursor:pointer;text-align:left;
   transition:all .2s;font-family:'DM Sans',sans-serif;gap:12px}
 .option-btn::after{
@@ -465,11 +465,10 @@ const STAR_META = [
 function applyBranding(cfg) {
   const p = cfg.theme_primary||'#7B2FBF';
   const a = cfg.theme_accent ||'#C77DFF';
-  document.documentElement.style.setProperty('--brand',    p);
-  document.documentElement.style.setProperty('--brand-btn',a);
-  document.documentElement.style.setProperty('--brand-acc',a);
-  document.getElementById('meta-theme').setAttribute('content',p);
-  document.title = cfg.title||'Zepto Survey';
+  document.documentElement.style.setProperty('--brand',     p);
+  document.documentElement.style.setProperty('--brand-btn', p);
+  document.documentElement.style.setProperty('--brand-acc', a);
+  document.documentElement.style.setProperty('--brand-dk',  p);
 }
 
 function applyEndScreens(cfg) {
