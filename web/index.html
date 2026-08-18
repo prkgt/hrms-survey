@@ -466,7 +466,7 @@ function applyBranding(cfg) {
   const p = cfg.theme_primary||'#7B2FBF';
   const a = cfg.theme_accent ||'#C77DFF';
   document.documentElement.style.setProperty('--brand',    p);
-  document.documentElement.style.setProperty('--brand-btn',p);
+  document.documentElement.style.setProperty('--brand-btn',a);
   document.documentElement.style.setProperty('--brand-acc',a);
   document.getElementById('meta-theme').setAttribute('content',p);
   document.title = cfg.title||'Zepto Survey';
