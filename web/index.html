@@ -637,7 +637,7 @@ function renderOnePerPage(cfg) {
     bottom.innerHTML='';
 
     // Auto-advance types
-    const autoAdv = ['star_rating','yes_no','nps','scale',
+    const autoAdv = ['star_rating','nps','scale',
     ...(q.auto_advance === false || q.allow_other ? [] : ['mcq'])];
     if (!autoAdv.includes(q.type) && q.type!=='section_header') {
       const isLast = currentQIdx === qs.length - 1;
@@ -649,6 +649,16 @@ function renderOnePerPage(cfg) {
           onclick="nextQ()">
           ${isLast ? 'Submit ✓' : 'Next →'}
         </button>
+      </div>`;
+    }
+
+    // Back button for auto-advance types on non-first questions
+    if (autoAdv.includes(q.type) && currentQIdx > 0) {
+      bottom.style.display = 'block';
+      const existing = bottom.innerHTML;
+      bottom.innerHTML = `<div class="nav-bar">
+        <button class="btn-back" onclick="prevQ()">←</button>
+        <div style="flex:1">${existing}</div>
       </div>`;
     }
 
@@ -937,7 +947,22 @@ function renderMCQ(q) {
     if (hasOther) opts.push(otherLabel);           // re-add Other at end
   }
 
-  return `<div class="options-col">
+  const nudge = q.show_nudge !== false ? `
+    <div style="background:#FFF8E7;border:1.5px solid #F5C842;border-radius:var(--rad-sm);
+                padding:12px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start">
+      <span style="font-size:18px;flex-shrink:0">⚠️</span>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:#7A5000;margin-bottom:2px">
+          Missed slots attract penalties
+        </div>
+        <div style="font-size:12px;color:#7A5000;line-height:1.5">
+          If you can't make a slot, cancel it in advance on Packman. 
+          Repeated no-shows without cancellation may affect your future bookings.
+        </div>
+      </div>
+    </div>` : '';
+
+  return `${nudge}<div class="options-col">
     ${opts.map(o => `<button class="option-btn" data-val="${o}">${o}</button>
       ${(q.allow_other && o === otherLabel) ? `
         <div class="other-input-wrap" id="other-wrap-${q.id}"
