@@ -269,6 +269,16 @@ body{
 
 .btn-full[disabled]{opacity:.45;cursor:default}
 
+.scroll-hint{
+  position:sticky;bottom:0;left:0;right:0;
+  text-align:center;padding:10px 0 4px;
+  background:linear-gradient(to bottom,transparent,rgba(255,255,255,.95) 40%);
+  font-size:12px;font-weight:600;color:var(--txt3);
+  pointer-events:none;transition:opacity .3s;
+  letter-spacing:.3px;
+}
+.scroll-hint.hide{opacity:0}
+
 /* Scrollable layout */
 .scroll-questions{display:flex;flex-direction:column;gap:14px;padding-bottom:16px}
 .scroll-q{background:var(--bg);border-radius:var(--rad);padding:18px 16px}
@@ -410,7 +420,7 @@ const API_URL  = 'https://script.google.com/macros/s/AKfycbwggTXHSUf_lwJBuusSohn
 const urlP     = new URLSearchParams(location.search);
 const SURVEY_ID = urlP.get('surveyId')||urlP.get('survey_id')||'';
 const EMP_ID    = urlP.get('employeeId')||urlP.get('employee_id')||urlP.get('riderId')||'guest';
-const SLOT_DATE = urlP.get('slotDate') ||
+const SLOT_DATE = (urlP.get('slotDate') || '').replace(/\+/g, ' ').trim() ||
   new Date().toLocaleDateString('en-IN', {
     day:'numeric', month:'short', year:'numeric',
     timeZone:'Asia/Kolkata'
@@ -444,6 +454,13 @@ const STAR_META = [
 
   applyBranding(config);
   applyEndScreens(config);
+
+  // Hide our header when running inside Packman — app provides its own
+  if (window.ReactNativeWebView) {
+    document.querySelector('.header').style.display = 'none';
+    document.querySelector('.card').style.borderRadius = '0';
+    document.querySelector('.card').style.marginTop = '0';
+  }
 
   // Fire view event to NRT
   if (window.ReactNativeWebView) {
@@ -675,7 +692,21 @@ function renderOnePerPage(cfg) {
     ${q.icon?`<div class="q-icon">${q.icon}</div>`:''}
     <div class="q-text">${q.text||''}</div>
     ${q.hint?`<div class="q-hint" style="margin-top:4px">${q.hint}</div>`:''}
-    <div id="q-input" style="margin-top:14px">${renderInput(q)}</div>`;
+    <div id="q-input" style="margin-top:14px">${renderInput(q)}</div>
+    <div class="scroll-hint" id="scroll-hint">↓ Scroll for more</div>`;
+
+    // Show/hide scroll hint based on overflow
+    requestAnimationFrame(() => {
+      const hint = document.getElementById('scroll-hint');
+      const el   = document.getElementById('survey-scroll');
+      if (!hint || !el) return;
+      const hasOverflow = el.scrollHeight > el.clientHeight + 10;
+      if (!hasOverflow) { hint.classList.add('hide'); return; }
+      el.addEventListener('scroll', () => {
+        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
+        hint.classList.toggle('hide', atBottom);
+      }, { passive: true });
+    });
 
     bottom.innerHTML='';
 
