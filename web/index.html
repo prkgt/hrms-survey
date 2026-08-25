@@ -272,32 +272,33 @@ body{
 
 .btn-full[disabled]{opacity:.45;cursor:default}
 
-.scroll-hint{
-  position:sticky;bottom:0;left:0;right:0;
-  text-align:center;padding:10px 0 4px;
-  background:linear-gradient(to bottom,transparent,rgba(255,255,255,.95) 40%);
-  font-size:12px;font-weight:600;color:var(--txt3);
-  pointer-events:none;transition:opacity .3s;
-  letter-spacing:.3px;
-}
-.scroll-hint.hide{opacity:0}
-
 /* WebView mode */
 body.in-webview{height:100vh;overflow:hidden}
 body.in-webview .card{margin-top:0!important;border-radius:0!important;max-height:100vh}
 
 .card-bottom::before {
-  content: '↓ scroll for more';
+  content: '↓  Scroll down';
   position: absolute;
-  top: -48px; left: 0; right: 0; height: 48px;
-  background: linear-gradient(to bottom, transparent, rgba(255,255,255,.95));
-  display: flex; align-items: flex-end; justify-content: center;
-  padding-bottom: 8px;
-  font-size: 12px; font-weight: 600; color: var(--txt3);
+  top: -38px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30,10,60,0.72);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: 20px;
+  white-space: nowrap;
   pointer-events: none;
-  opacity: 1; transition: opacity .25s;
+  letter-spacing: .3px;
+  opacity: 1;
+  transition: opacity .3s;
+  animation: bob 1.4s ease-in-out infinite;
 }
-.card-bottom.scrolled-to-bottom::before { opacity: 0; }
+.card-bottom.scrolled-to-bottom::before {
+  opacity: 0;
+  animation: none;
+}
 
 /* Scrollable layout */
 .scroll-questions{display:flex;flex-direction:column;gap:14px;padding-bottom:16px}
@@ -711,8 +712,7 @@ function renderOnePerPage(cfg) {
     ${q.icon?`<div class="q-icon">${q.icon}</div>`:''}
     <div class="q-text">${q.text||''}</div>
     ${q.hint?`<div class="q-hint" style="margin-top:4px">${q.hint}</div>`:''}
-    <div id="q-input" style="margin-top:14px">${renderInput(q)}</div>
-    <div class="scroll-hint" id="scroll-hint">↓ Scroll for more</div>`;
+    <div id="q-input" style="margin-top:14px">${renderInput(q)}</div>`;
 
     // Scroll fade — toggle class on card-bottom based on overflow
     requestAnimationFrame(() => {
