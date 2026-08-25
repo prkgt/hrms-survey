@@ -445,21 +445,65 @@ const STAR_META = [
   applyBranding(config);
   applyEndScreens(config);
 
-  const chk = await apiFetch('?action=check_submitted&survey_id='+SURVEY_ID+'&employee_id='+EMP_ID);
-  if (chk && chk.already_submitted) {
-    if (chk.next_date) { document.getElementById('alr-date').style.display=''; document.getElementById('alr-date-val').textContent=chk.next_date; }
-    goStep('step-already'); return;
+  // Fire view event to NRT
+  if (window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({
+      type: 'ZEPTO_INTERNAL',
+      action: 'MANDATORY_FORM_VIEW',
+      payload: {
+        formId:     SURVEY_ID,
+        employeeId: EMP_ID,
+        surveyId:   SURVEY_ID,
+        viewedAt:   Date.now(),
+        metadata: {
+          platform: 'packman-webview',
+        }
+      }
+    }));
   }
 
-  const SLOT_DATE = urlP.get('slotDate') ||
-  new Date().toLocaleDateString('en-IN', {
-    day:'numeric', month:'short', year:'numeric',
-    timeZone:'Asia/Kolkata'
-  });
+  // Already-submitted check — native bridge or GSheets fallback
+  const alreadyDone = await checkAlreadySubmitted();
+  if (alreadyDone) { goStep('step-already'); return; }
 
   renderSurvey(config);
   goStep('step-survey');
+
 })();
+
+async function checkAlreadySubmitted() {
+  // Native bridge path — app team implements ZEPTO_CHECK_RESULT callback
+  if (window.ReactNativeWebView) {
+    return new Promise((resolve) => {
+      // Listen for app response
+      window.addEventListener('ZEPTO_CHECK_RESULT', (e) => {
+        resolve(e.detail?.already_submitted === true);
+      }, { once: true });
+
+      // 5s timeout — if app never responds, assume not submitted (don't block user)
+      setTimeout(() => resolve(false), 5000);
+
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'ZEPTO_INTERNAL',
+        action: 'MANDATORY_FORM_CHECK',
+        payload: {
+          formId:     SURVEY_ID,
+          employeeId: EMP_ID,
+          surveyId:   SURVEY_ID,
+          metadata: {
+            platform: 'packman-webview',
+          }
+        }
+      }));
+    });
+  }
+
+  // Fallback — GSheets (browser / non-Packman access)
+  const chk = await apiFetch(
+    '?action=check_submitted&survey_id='+SURVEY_ID+'&employee_id='+EMP_ID
+  );
+  return chk?.already_submitted === true;
+}
 
 // ── Branding ───────────────────────────────────────────
 function applyBranding(cfg) {
@@ -1076,33 +1120,52 @@ async function doSubmit() {
   document.querySelector('#step-submitting .loading-sub').textContent =
     "Saving your response — please don't close this screen…";
 
+  // ── Native bridge path (Packman WebView) ──────────────
+  if (window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({
+      type: 'ZEPTO_INTERNAL',
+      action: 'MANDATORY_FORM_SUBMIT',
+      payload: {
+        // Top-level fields for easy DB querying
+        formId:      SURVEY_ID,
+        employeeId:  EMP_ID,
+        surveyId:    SURVEY_ID,
+        answers:     answers,
+        weekKey:     getWeekKey(),
+        submittedAt: Date.now(),
+        // Metadata for future extensibility
+        metadata: {
+          platform:      'packman-webview',
+          surveyVersion: '1.0',
+        }
+      }
+    }));
+    // Gap 1 ignored — show success optimistically
+    goStep('step-success');
+    return;
+  }
+
+  function getWeekKey() {
+  const now = new Date();
+  const day  = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(now.setDate(diff));
+  return monday.toISOString().slice(0, 10); // YYYY-MM-DD of week's Monday
+  }
+
+  // ── Fallback: GSheets path (browser / non-Packman) ───
   const maxAttempts = 3;
   let attempts = 0;
-
   while (attempts < maxAttempts) {
     try {
       const r = await apiPost(lastPayload);
-      if (r.already_submitted) {
-        if (r.next_date) {
-          document.getElementById('alr-date').style.display = '';
-          document.getElementById('alr-date-val').textContent = r.next_date;
-        }
-        goStep('step-already');
-        return;
-      }
-      if (r.ok) {
-        goStep('step-success');
-        return;
-      }
-      // r returned but not ok — wait and retry
-      attempts++;
-      if (attempts < maxAttempts) await sleep(1000 * attempts);
+      if (r.already_submitted) { goStep('step-already'); return; }
+      if (r.ok) { goStep('step-success'); return; }
+      attempts++; if (attempts < maxAttempts) await sleep(1000 * attempts);
     } catch(_) {
-      attempts++;
-      if (attempts < maxAttempts) await sleep(1000 * attempts);
+      attempts++; if (attempts < maxAttempts) await sleep(1000 * attempts);
     }
   }
-  // All attempts exhausted
   goStep('step-error');
 }
 
