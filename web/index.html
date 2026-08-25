@@ -46,13 +46,14 @@ body{
 }
 .card-scroll.no-scroll{overflow-y:hidden}
 .card-bottom {
-  flex-shrink: 0;       /* never gets squished */
+  flex-shrink: 0;
+  position: relative;
   padding: 12px 24px;
   padding-bottom: max(32px, env(safe-area-inset-bottom));
   background: var(--sur);
   border-top: .5px solid var(--bdr);
 }
-.step{display:none;flex-direction:column;flex:1}
+.step{display:none;flex-direction:column;flex:1;min-height:0}
 .step.active{display:flex;animation:fadeIn .3s ease both}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
@@ -285,18 +286,18 @@ body{
 body.in-webview{height:100vh;overflow:hidden}
 body.in-webview .card{margin-top:0!important;border-radius:0!important;max-height:100vh}
 
-/* Scroll fade */
-.scroll-fade{
-  flex-shrink:0;height:0;position:relative;z-index:5;
-  pointer-events:none;display:none
+.card-bottom::before {
+  content: '↓ scroll for more';
+  position: absolute;
+  top: -48px; left: 0; right: 0; height: 48px;
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,.95));
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 8px;
+  font-size: 12px; font-weight: 600; color: var(--txt3);
+  pointer-events: none;
+  opacity: 1; transition: opacity .25s;
 }
-.scroll-fade-inner{
-  position:absolute;bottom:0;left:0;right:0;height:56px;
-  background:linear-gradient(to bottom,transparent,rgba(255,255,255,.96));
-  display:flex;align-items:flex-end;justify-content:center;
-  padding-bottom:10px;font-size:12px;font-weight:600;
-  color:var(--txt3);letter-spacing:.3px
-}
+.card-bottom.scrolled-to-bottom::before { opacity: 0; }
 
 /* Scrollable layout */
 .scroll-questions{display:flex;flex-direction:column;gap:14px;padding-bottom:16px}
@@ -366,9 +367,6 @@ body.in-webview .card{margin-top:0!important;border-radius:0!important;max-heigh
   <!-- SURVEY (populated dynamically) -->
   <div class="step" id="step-survey">
     <div class="card-scroll" id="survey-scroll"></div>
-    <div class="scroll-fade" id="scroll-fade">
-      <div class="scroll-fade-inner">↓ scroll for more</div>
-    </div>
     <div class="card-bottom" id="survey-bottom" style="display:none"></div>
   </div>
 
@@ -716,20 +714,20 @@ function renderOnePerPage(cfg) {
     <div id="q-input" style="margin-top:14px">${renderInput(q)}</div>
     <div class="scroll-hint" id="scroll-hint">↓ Scroll for more</div>`;
 
-    // Scroll fade — shows when content overflows, hides when scrolled to bottom
+    // Scroll fade — toggle class on card-bottom based on overflow
     requestAnimationFrame(() => {
       const scrollEl = document.getElementById('survey-scroll');
-      const fade     = document.getElementById('scroll-fade');
-      if (!scrollEl || !fade) return;
+      const bottom   = document.getElementById('survey-bottom');
+      if (!scrollEl || !bottom) return;
 
-      const updateFade = () => {
+      const update = () => {
         const hasOverflow = scrollEl.scrollHeight > scrollEl.clientHeight + 20;
         const atBottom    = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 20;
-        fade.style.display = (hasOverflow && !atBottom) ? 'block' : 'none';
+        bottom.classList.toggle('scrolled-to-bottom', !hasOverflow || atBottom);
       };
 
-      updateFade();
-      scrollEl.addEventListener('scroll', updateFade, { passive: true });
+      update();
+      scrollEl.addEventListener('scroll', update, { passive: true });
     });
 
     bottom.innerHTML='';
