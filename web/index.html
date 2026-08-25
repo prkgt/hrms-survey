@@ -42,9 +42,11 @@ body{
   padding: 12px 14px 16px;
   display: flex;
   flex-direction: column;
+  min-height: 0;        /* critical — allows flex child to shrink */
 }
 .card-scroll.no-scroll{overflow-y:hidden}
 .card-bottom {
+  flex-shrink: 0;       /* never gets squished */
   padding: 12px 24px;
   padding-bottom: max(32px, env(safe-area-inset-bottom));
   background: var(--sur);
@@ -279,6 +281,23 @@ body{
 }
 .scroll-hint.hide{opacity:0}
 
+/* WebView mode */
+body.in-webview{height:100vh;overflow:hidden}
+body.in-webview .card{margin-top:0!important;border-radius:0!important;max-height:100vh}
+
+/* Scroll fade */
+.scroll-fade{
+  flex-shrink:0;height:0;position:relative;z-index:5;
+  pointer-events:none;display:none
+}
+.scroll-fade-inner{
+  position:absolute;bottom:0;left:0;right:0;height:56px;
+  background:linear-gradient(to bottom,transparent,rgba(255,255,255,.96));
+  display:flex;align-items:flex-end;justify-content:center;
+  padding-bottom:10px;font-size:12px;font-weight:600;
+  color:var(--txt3);letter-spacing:.3px
+}
+
 /* Scrollable layout */
 .scroll-questions{display:flex;flex-direction:column;gap:14px;padding-bottom:16px}
 .scroll-q{background:var(--bg);border-radius:var(--rad);padding:18px 16px}
@@ -347,6 +366,9 @@ body{
   <!-- SURVEY (populated dynamically) -->
   <div class="step" id="step-survey">
     <div class="card-scroll" id="survey-scroll"></div>
+    <div class="scroll-fade" id="scroll-fade">
+      <div class="scroll-fade-inner">↓ scroll for more</div>
+    </div>
     <div class="card-bottom" id="survey-bottom" style="display:none"></div>
   </div>
 
@@ -457,9 +479,8 @@ const STAR_META = [
 
   // Hide our header when running inside Packman — app provides its own
   if (window.ReactNativeWebView) {
+    document.body.classList.add('in-webview');
     document.querySelector('.header').style.display = 'none';
-    document.querySelector('.card').style.borderRadius = '0';
-    document.querySelector('.card').style.marginTop = '0';
   }
 
   // Fire view event to NRT
@@ -695,17 +716,20 @@ function renderOnePerPage(cfg) {
     <div id="q-input" style="margin-top:14px">${renderInput(q)}</div>
     <div class="scroll-hint" id="scroll-hint">↓ Scroll for more</div>`;
 
-    // Show/hide scroll hint based on overflow
+    // Scroll fade — shows when content overflows, hides when scrolled to bottom
     requestAnimationFrame(() => {
-      const hint = document.getElementById('scroll-hint');
-      const el   = document.getElementById('survey-scroll');
-      if (!hint || !el) return;
-      const hasOverflow = el.scrollHeight > el.clientHeight + 10;
-      if (!hasOverflow) { hint.classList.add('hide'); return; }
-      el.addEventListener('scroll', () => {
-        const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
-        hint.classList.toggle('hide', atBottom);
-      }, { passive: true });
+      const scrollEl = document.getElementById('survey-scroll');
+      const fade     = document.getElementById('scroll-fade');
+      if (!scrollEl || !fade) return;
+
+      const updateFade = () => {
+        const hasOverflow = scrollEl.scrollHeight > scrollEl.clientHeight + 20;
+        const atBottom    = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 20;
+        fade.style.display = (hasOverflow && !atBottom) ? 'block' : 'none';
+      };
+
+      updateFade();
+      scrollEl.addEventListener('scroll', updateFade, { passive: true });
     });
 
     bottom.innerHTML='';
